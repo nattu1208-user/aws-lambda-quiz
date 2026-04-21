@@ -1,0 +1,14 @@
+{
+  "name": "AWS Lambda 特化��イズ",
+  "short_name": "Lambdaクイズ",
+  "description": "Lambda の知識を多角的に問い、繰り返し解くことで理解を深めるクイズ",
+  "start_url": "/aws-lambda-quiz/",
+  "display": "standalone",
+  "background_color": "#1a2332",
+  "theme_color": "#FF9900",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

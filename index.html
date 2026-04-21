@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<!--
+  AWS Lambda 特化クイズ
+  目的: Lambda の知識を多角的に問い、繰り返し解くことで理解を深める。
+       基礎知識・設計パターン・連携・最適化・SAAシナリオの5カテゴリ50問。
+  作成者: Sekimoto Naoto
+  作成日: 2026-04-21
+-->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lambda 特化クイズ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF9900">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lambdaクイズ">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="questions.js"></script>
+<style>
+:root {
+  --primary: #FF9900;
+  --aws-dark: #232f3e;
+  --correct: #059669;
+  --wrong: #dc2626;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --section-exp: #f0fdf4;
+  --section-why-not: #fff7ed;
+  --section-point: #eff6ff;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; flex-direction: column; min-height: 100%; max-width: 540px; margin: 0 auto;
+}
+
+/* ===== スタート画面 ===== */
+#screen-start {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; padding: 40px 20px; gap: 18px;
+}
+.start-logo { font-size: 3rem; }
+.start-title { font-size: 1.4rem; font-weight: 800; color: var(--aws-dark); text-align: center; line-height: 1.4; }
+.start-title .hl { color: var(--primary); }
+.start-sub { font-size: 0.82rem; color: var(--muted); text-align: center; line-height: 1.7; }
+.start-stats {
+  background: var(--aws-dark); color: white; border-radius: 18px;
+  padding: 18px 24px; width: 100%; max-width: 320px; text-align: center;
+}
+.stat-main-num { font-size: 2.2rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.stat-main-label { font-size: 0.72rem; opacity: 0.75; margin-top: 4px; margin-bottom: 12px; }
+.stat-row { display: flex; justify-content: space-around; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 12px; }
+.stat-item .n { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+.stat-item .l { font-size: 0.62rem; opacity: 0.7; margin-top: 2px; }
+.btn-start {
+  background: var(--primary); color: white; border: none; border-radius: 14px;
+  padding: 16px 0; font-size: 1rem; font-weight: 700; cursor: pointer;
+  width: 100%; max-width: 320px; box-shadow: 0 4px 16px rgba(255,153,0,0.35); transition: opacity 0.15s;
+}
+.btn-start:active { opacity: 0.85; }
+
+/* ===== カテゴリフィルター ===== */
+.filter-area { width: 100%; max-width: 320px; }
+.filter-label { font-size: 0.7rem; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 0.68rem; padding: 5px 10px; border-radius: 12px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--card); color: var(--muted); font-weight: 600;
+  transition: all 0.15s;
+}
+.chip.active { border-color: var(--primary); background: #fff8f0; color: var(--primary); }
+.chip:active { opacity: 0.8; }
+
+/* ===== クイズ画面 ===== */
+#screen-quiz { display: none; flex-direction: column; flex: 1; }
+.quiz-header { background: var(--aws-dark); padding: 10px 16px; color: white; flex-shrink: 0; }
+.quiz-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.quiz-header-title { font-size: 0.78rem; font-weight: 700; opacity: 0.9; }
+.quiz-header-title .hl { color: var(--primary); }
+.quiz-header-num { font-size: 0.85rem; font-weight: 700; color: var(--primary); }
+.progress-dots { display: flex; gap: 5px; }
+.dot { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); transition: background 0.3s; flex: 1; }
+.dot.done-ok { background: #6ee7b7; }
+.dot.done-ng { background: #fca5a5; }
+.dot.current { background: var(--primary); }
+.quiz-body { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+.question-card {
+  background: var(--aws-dark); border-radius: 18px; padding: 20px 16px 16px;
+  color: white; box-shadow: 0 2px 14px rgba(0,0,0,0.18);
+}
+.question-card-label { font-size: 0.6rem; font-weight: 700; color: var(--primary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+.question-text { font-size: 0.92rem; line-height: 1.7; font-weight: 500; }
+.question-meta { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.category-badge { font-size: 0.6rem; background: rgba(255,153,0,0.2); color: var(--primary); padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+
+.choices { display: flex; flex-direction: column; gap: 8px; }
+.choice-btn {
+  background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+  padding: 12px 14px; text-align: left; cursor: pointer; width: 100%;
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.84rem; line-height: 1.55; transition: border-color 0.15s, background 0.15s;
+}
+.choice-btn:not(.disabled):active { border-color: var(--primary); background: #fff8f0; }
+.choice-btn.disabled { cursor: default; pointer-events: none; }
+.choice-btn.correct { border-color: var(--correct); background: #f0fdf4; }
+.choice-btn.wrong { border-color: var(--wrong); background: #fff1f2; }
+.choice-num {
+  min-width: 26px; height: 26px; border-radius: 50%; background: var(--bg);
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+}
+.choice-btn.correct .choice-num { background: var(--correct); color: white; }
+.choice-btn.wrong .choice-num { background: var(--wrong); color: white; }
+
+/* 解説パネル */
+.explanation-panel { display: none; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.1); margin-top: 4px; }
+.explanation-panel.show { display: block; }
+.exp-header { padding: 14px 16px 12px; font-size: 1rem; font-weight: 800; }
+.exp-header.correct-header { background: #f0fdf4; border-left: 4px solid var(--correct); color: var(--correct); }
+.exp-header.wrong-header { background: #fff1f2; border-left: 4px solid var(--wrong); color: var(--wrong); }
+.exp-section { padding: 12px 16px; border-top: 1px solid rgba(0,0,0,0.05); }
+.exp-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.exp-explanation { background: var(--section-exp); }
+.exp-why-not { background: var(--section-why-not); }
+.exp-point { background: var(--section-point); }
+.exp-text { font-size: 0.84rem; line-height: 1.7; color: var(--text); }
+.why-not-item { margin-bottom: 8px; }
+.why-not-item:last-child { margin-bottom: 0; }
+.why-not-label { font-weight: 700; color: var(--wrong); font-size: 0.78rem; margin-bottom: 2px; }
+.why-not-desc { font-size: 0.82rem; line-height: 1.6; color: var(--text); }
+.point-text { font-size: 0.88rem; line-height: 1.7; color: #1e40af; font-weight: 600; }
+
+.btn-next {
+  display: block; width: 100%; background: var(--aws-dark); color: white;
+  border: none; padding: 14px; font-size: 0.95rem; font-weight: 700;
+  cursor: pointer; text-align: center; transition: opacity 0.15s;
+}
+.btn-next:active { opacity: 0.85; }
+
+/* ===== 結果画面 ===== */
+#screen-result { display: none; flex-direction: column; flex: 1; }
+.result-inner { display: flex; flex-direction: column; align-items: center; padding: 28px 18px; overflow-y: auto; flex: 1; }
+.result-emoji { font-size: 3.5rem; margin-bottom: 8px; }
+.result-score { font-size: 3rem; font-weight: 800; color: var(--aws-dark); line-height: 1; }
+.result-score-denom { font-size: 1.2rem; color: var(--muted); font-weight: 400; }
+.result-msg { font-size: 0.9rem; color: var(--muted); margin-top: 8px; margin-bottom: 20px; text-align: center; }
+.result-section-title { font-size: 0.68rem; font-weight: 700; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 10px; align-self: flex-start; }
+.wrong-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; width: 100%; margin-bottom: 10px; }
+.wrong-card-q { font-size: 0.82rem; color: var(--text); font-weight: 500; line-height: 1.5; margin-bottom: 6px; }
+.wrong-card-answer { font-size: 0.78rem; color: var(--correct); font-weight: 600; }
+.wrong-card-point { font-size: 0.76rem; color: #1e40af; font-weight: 500; margin-top: 4px; }
+
+#celebration-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+.confetti-piece { position: absolute; animation: confetti-fall linear forwards; border-radius: 2px; }
+@keyframes confetti-fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="celebration-overlay"></div>
+
+<!-- スタート画面 -->
+<div id="screen-start">
+  <div class="start-logo">⚡</div>
+  <div class="start-title"><span class="hl">Lambda</span> 特化クイズ</div>
+  <div class="start-sub">基礎知識・設計パターン・連携・最適化・SAAシナリオ<br>50問を繰り返し解いて Lambda マスターへ</div>
+  <div class="start-stats">
+    <div class="stat-main-num" id="stat-total">0</div>
+    <div class="stat-main-label">問チャレンジ済み</div>
+    <div class="stat-row">
+      <div class="stat-item"><div class="n" id="stat-correct">0</div><div class="l">正解</div></div>
+      <div class="stat-item"><div class="n" id="stat-cards">0</div><div class="l">問題数</div></div>
+      <div class="stat-item"><div class="n" id="stat-review">0</div><div class="l">復習待ち</div></div>
+    </div>
+  </div>
+  <div class="filter-area">
+    <div class="filter-label">カテゴリ絞り込み</div>
+    <div class="filter-chips" id="filter-chips"></div>
+  </div>
+  <button class="btn-start" onclick="startSet()">スタート（5��）</button>
+</div>
+
+<!-- クイズ画面 -->
+<div id="screen-quiz">
+  <div class="quiz-header">
+    <div class="quiz-header-top">
+      <div class="quiz-header-title">⚡ <span class="hl">Lambda</span> 特化クイズ</div>
+      <div class="quiz-header-num" id="hd-qnum">1 / 5</div>
+    </div>
+    <div class="progress-dots" id="progress-dots"></div>
+  </div>
+  <div class="quiz-body" id="quiz-body">
+    <div class="question-card">
+      <div class="question-card-label" id="q-label">Lambda</div>
+      <div class="question-text" id="question-text"></div>
+      <div class="question-meta">
+        <span class="category-badge" id="q-category"></span>
+      </div>
+    </div>
+    <div class="choices" id="choices"></div>
+    <div class="explanation-panel" id="exp-panel">
+      <div class="exp-header" id="exp-header"></div>
+      <div class="exp-section exp-explanation">
+        <div class="exp-section-title">正解の理由</div>
+        <div class="exp-text" id="exp-explanation"></div>
+      </div>
+      <div class="exp-section exp-why-not">
+        <div class="exp-section-title">他の選択肢がダメな理由</div>
+        <div id="exp-why-not"></div>
+      </div>
+      <div class="exp-section exp-point">
+        <div class="exp-section-title">🔑 ポイント</div>
+        <div class="point-text" id="exp-point"></div>
+      </div>
+      <button class="btn-next" onclick="nextQuestion()">次へ</button>
+    </div>
+  </div>
+</div>
+
+<!-- 結果画面 -->
+<div id="screen-result">
+  <div class="result-inner" id="result-inner"></div>
+</div>
+
+<script>
+const ALL_Q = (typeof QUESTIONS !== 'undefined' && Array.isArray(QUESTIONS)) ? QUESTIONS : [];
+const STORAGE_KEY = 'aws_lambda_quiz_v1';
+let appData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"correct":{},"wrong":{},"pendingReview":[],"totalAnswered":0}');
+let currentSet = [];
+let qIndex = 0;
+let results = [];
+let activeCategory = null;
+
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function showScreen(name) {
+  ['screen-start','screen-quiz','screen-result'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+  const el = document.getElementById('screen-' + name);
+  el.style.display = 'flex'; el.style.flexDirection = 'column';
+}
+function escHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// カテゴリフィルター
+function initFilters() {
+  const cats = [...new Set(ALL_Q.map(q => q.category))];
+  const el = document.getElementById('filter-chips');
+  el.innerHTML = `<div class="chip active" onclick="setFilter(null, this)">すべて</div>` +
+    cats.map(c => `<div class="chip" onclick="setFilter('${c}', this)">${c}</div>`).join('');
+}
+function setFilter(cat, chipEl) {
+  activeCategory = cat;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  chipEl.classList.add('active');
+  updateStartStats();
+}
+
+function getPool() {
+  return activeCategory ? ALL_Q.filter(q => q.category === activeCategory) : ALL_Q;
+}
+
+function updateStartStats() {
+  document.getElementById('stat-total').textContent = appData.totalAnswered || 0;
+  document.getElementById('stat-correct').textContent = Object.values(appData.correct).reduce((s,v) => s+v, 0);
+  document.getElementById('stat-cards').textContent = getPool().length;
+  document.getElementById('stat-review').textContent = (appData.pendingReview || []).filter(id => getPool().some(q => q.id === id)).length;
+}
+
+function startSet() {
+  const pool = getPool();
+  const reviewIds = new Set(appData.pendingReview || []);
+  const reviewPool = shuffle(pool.filter(q => reviewIds.has(q.id)));
+  const normalPool = shuffle(pool.filter(q => !reviewIds.has(q.id)));
+  let picked = [...reviewPool];
+  for (const q of normalPool) { if (picked.length >= 5) break; picked.push(q); }
+  currentSet = shuffle(picked).slice(0, 5);
+  if (currentSet.length === 0) return;
+  qIndex = 0; results = [];
+  showScreen('quiz'); showQuestion();
+}
+
+function showQuestion() {
+  if (qIndex >= currentSet.length) { showResult(); return; }
+  const q = currentSet[qIndex];
+  document.getElementById('hd-qnum').textContent = `${qIndex+1} / ${currentSet.length}`;
+  updateDots();
+  document.getElementById('question-text').textContent = q.question;
+  document.getElementById('q-category').textContent = q.category;
+  document.getElementById('q-label').textContent = q.category;
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = q.choices.map(ch => `
+    <button class="choice-btn" onclick="answer('${ch.id}', this)" data-id="${ch.id}">
+      <div class="choice-num">${ch.id}</div>
+      <div class="choice-text">${escHtml(ch.text)}</div>
+    </button>
+  `).join('');
+  document.getElementById('exp-panel').classList.remove('show');
+  document.getElementById('quiz-body').scrollTop = 0;
+}
+
+function updateDots() {
+  document.getElementById('progress-dots').innerHTML = currentSet.map((_, i) => {
+    let cls = 'dot';
+    if (i < results.length) cls += results[i] ? ' done-ok' : ' done-ng';
+    else if (i === qIndex) cls += ' current';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+}
+
+function answer(selectedId, btnEl) {
+  const q = currentSet[qIndex];
+  const ok = selectedId === q.correct;
+  document.querySelectorAll('.choice-btn').forEach(b => {
+    b.classList.add('disabled');
+    if (b.dataset.id === q.correct) b.classList.add('correct');
+  });
+  if (!ok) btnEl.classList.add('wrong');
+  appData.totalAnswered = (appData.totalAnswered || 0) + 1;
+  if (ok) {
+    appData.correct[q.id] = (appData.correct[q.id] || 0) + 1;
+    appData.pendingReview = (appData.pendingReview || []).filter(id => id !== q.id);
+    results.push(true);
+  } else {
+    appData.wrong[q.id] = (appData.wrong[q.id] || 0) + 1;
+    if (!(appData.pendingReview || []).includes(q.id)) appData.pendingReview = [...(appData.pendingReview || []), q.id];
+    results.push(false);
+  }
+  saveData(); updateDots();
+  buildExplanation(q, ok, selectedId);
+  setTimeout(() => { document.getElementById('exp-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 150);
+}
+
+function buildExplanation(q, ok, selectedId) {
+  const panel = document.getElementById('exp-panel');
+  const header = document.getElementById('exp-header');
+  header.textContent = ok ? '正解！' : '不正解 — 正解は ' + q.correct;
+  header.className = ok ? 'exp-header correct-header' : 'exp-header wrong-header';
+  document.getElementById('exp-explanation').textContent = q.explanation;
+  const whyNotEl = document.getElementById('exp-why-not');
+  whyNotEl.innerHTML = q.choices.filter(ch => ch.id !== q.correct).map(ch => `
+    <div class="why-not-item">
+      <div class="why-not-label">${ch.id}: ${escHtml(ch.text.substring(0, 50))}${ch.text.length > 50 ? '…' : ''}</div>
+      <div class="why-not-desc">${escHtml(q.why_not[ch.id] || '')}</div>
+    </div>
+  `).join('');
+  document.getElementById('exp-point').textContent = q.point || '';
+  panel.classList.add('show');
+}
+
+function nextQuestion() { qIndex++; showQuestion(); }
+
+function showResult() {
+  showScreen('result');
+  const n = results.filter(Boolean).length;
+  const total = currentSet.length;
+  const wrongItems = currentSet.filter((_, i) => !results[i]);
+  if (n >= 4) setTimeout(() => celebrate(n), 400);
+  const emoji = n === total ? '🏆' : n >= 4 ? '🌟' : n >= 3 ? '🎉' : n >= 2 ? '👍' : '💪';
+  const msg = n === total ? '完璧！全問正解！' : n >= 4 ? 'あと少し！' : n >= 3 ? '良い調子！' : '復習で実力UP！';
+  const wrongHtml = wrongItems.length > 0
+    ? `<div class="result-section-title">復習ポイント</div>
+       ${wrongItems.map(q => `
+         <div class="wrong-card">
+           <div class="wrong-card-q">${escHtml(q.question.substring(0, 100))}${q.question.length > 100 ? '…' : ''}</div>
+           <div class="wrong-card-answer">→ ${q.correct}: ${escHtml(q.choices.find(c => c.id === q.correct).text.substring(0, 60))}${q.choices.find(c => c.id === q.correct).text.length > 60 ? '…' : ''}</div>
+           <div class="wrong-card-point">${escHtml(q.point || '')}</div>
+         </div>
+       `).join('')}`
+    : '';
+  document.getElementById('result-inner').innerHTML = `
+    <div class="result-emoji">${emoji}</div>
+    <div class="result-score">${n} <span class="result-score-denom">/ ${total}</span></div>
+    <div class="result-msg">${msg}</div>
+    ${wrongHtml}
+    <button class="btn-start" onclick="goStart()" style="margin-top:16px">もう一度</button>
+  `;
+  updateStartStats();
+}
+function goStart() { showScreen('start'); updateStartStats(); }
+
+// 初期化
+initFilters();
+updateStartStats();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/aws-lambda-quiz/service-worker.js').catch(() => {});
+
+function celebrate(score) {
+  const overlay = document.getElementById('celebration-overlay');
+  overlay.innerHTML = '';
+  const colors = ['#FF9900','#232f3e','#059669','#3b82f6','#8b5cf6','#ec4899'];
+  const n = score === 5 ? 100 : 50;
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `left:${Math.random()*100}%;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>0.5?'50%':'2px'};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*1.5}s`;
+    overlay.appendChild(el);
+  }
+  setTimeout(() => { overlay.innerHTML = ''; }, 5000);
+}
+</script>
+</body>
+</html>
