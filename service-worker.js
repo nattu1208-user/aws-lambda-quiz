@@ -9,7 +9,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'aws-lambda-quiz-v1';
+const CACHE_NAME = 'aws-lambda-quiz-v2';
 
 const CACHE_URLS = [
   '/aws-lambda-quiz/',
